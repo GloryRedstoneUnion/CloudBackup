@@ -21,15 +21,15 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Zip plugin directory
-        run: |
-          zip -r mcdr-cloudbackup.mcdr . -x "*.git*" "*.github*" "*.DS_Store"
-
       - name: Get latest tag or use date
         id: get_tag
         run: |
           TAG=$(git describe --tags --abbrev=0 2>/dev/null || date +'%Y%m%d%H%M%S')
           echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Zip plugin directory
+        run: |
+          zip -r mcdr-cloudbackup-${{ steps.get_tag.outputs.tag }}.mcdr . -x "*.git*" "*.github*" "*.DS_Store"
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
