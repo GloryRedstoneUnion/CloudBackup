@@ -1,0 +1,9 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# 断点/配置/记录等所有 json 文件，但不忽略 mcdreforged.plugin.json
+*.json
+!mcdreforged.plugin.json
+
+# 你可以根据需要添加其它忽略规则

@@ -1,0 +1,22 @@
+{
+    "id": "cloudbackup",
+    "version": "0.1.0",
+    "name": "CloudBackup",
+    "description": {
+        "en_us": "A MCDR plugin for automatic backup to Alibaba Cloud OSS.",
+        "zh_cn": "自动备份到阿里云OSS的MCDR插件"
+    },
+    "author": [
+        "caikun233"
+    ],
+    "link": "",
+    "dependencies": {
+        "mcdreforged": ">=2.1.0"
+    },
+    "archive_name": "CloudBackup-v{version}",
+    "entrypoint": "cloudbackup.cloudbackup",
+    "resources": [
+        "cloudbackup",
+        "LICENSE"
+    ]
+}
