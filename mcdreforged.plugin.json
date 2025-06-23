@@ -1,6 +1,6 @@
 {
     "id": "cloudbackup",
-    "version": "0.1.0",
+    "version": "0.1.5",
     "name": "CloudBackup",
     "description": {
         "en_us": "A MCDR plugin for automatic backup to Alibaba Cloud OSS.",

@@ -2,12 +2,12 @@ import os
 import shutil
 import threading
 from datetime import datetime
-from ..utils.utils import gen_task_id, get_timestamp
-from ..oss.oss_util import get_oss_client, upload_file_multipart, check_cloud_file_size
-from ..model.record import backup_records, save_backup_records
+from cloudbackup.utils.utils import gen_task_id, get_timestamp
+from cloudbackup.oss.oss_util import get_oss_client, upload_file_multipart, check_cloud_file_size
+from cloudbackup.model.record import backup_records, save_backup_records, load_backup_records
+from cloudbackup.core.resume_util import save_resume_info, load_resume_info, remove_resume_info
 from mcdreforged.api.all import PluginServerInterface
-from ..config import CloudBackupConfig
-from .resume_util import save_resume_info, load_resume_info, remove_resume_info
+from cloudbackup.config import CloudBackupConfig
 
 backup_thread = None
 backup_running = False
@@ -35,7 +35,7 @@ def do_backup(server, src, config, task_id=None, resume_info=None):
         src.reply(f'§e[CloudBackup] 上传进度: §b{percent}% §8({part}/{total_parts}分片)')
         # 实时保存断点
         if resume_info is not None:
-            save_resume_info(task_id, resume_info)
+            save_resume_info(server, task_id, resume_info)
     try:
         try:
             client = get_oss_client(config)
@@ -55,7 +55,8 @@ def do_backup(server, src, config, task_id=None, resume_info=None):
             if getattr(config, 'BackupSourceDir', None):
                 world_dir = config.BackupSourceDir
             else:
-                world_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))), 'server', 'world')
+                # 默认 world 目录为数据目录同级 server/world
+                world_dir = os.path.abspath(os.path.join(server.get_data_folder(), '../../server/world'))
             if not os.path.exists(world_dir):
                 backup_status = 'error: world目录不存在'
                 backup_error_msg = 'world目录不存在'
@@ -85,12 +86,12 @@ def do_backup(server, src, config, task_id=None, resume_info=None):
         backup_end_time = datetime.now()
         if resume_info_out:
             # 上传未完成，保存断点信息
-            save_resume_info(task_id, resume_info_out)
+            save_resume_info(server, task_id, resume_info_out)
             src.reply(f'§c上传中断，断点信息已保存。可用 !!cb continue {task_id} 续传，或 !!cb abort {task_id} 放弃。')
             backup_status = 'interrupted'
             return
         else:
-            remove_resume_info(task_id)
+            remove_resume_info(server, task_id)
         # 上传完成后校验云端文件大小
         cloud_check_passed = False
         try:
@@ -131,7 +132,7 @@ def do_backup(server, src, config, task_id=None, resume_info=None):
             'upload_speed': round(speed/1024/1024, 2),
             'duration': round((backup_end_time-backup_start_time).total_seconds(), 2)
         })
-        save_backup_records()
+        save_backup_records(server)
         # 自动清理本地多余压缩包（保留最新 N 个）
         try:
             keep_count = getattr(config, 'LocalBackupKeepCount', 5)
@@ -163,11 +164,10 @@ def do_backup(server, src, config, task_id=None, resume_info=None):
             'upload_speed': 0,
             'duration': round((backup_end_time-backup_start_time).total_seconds(), 2)
         })
-        save_backup_records()
+        save_backup_records(server)
 
-def start_backup(src, config):
+def start_backup(server, src, config):
     global backup_thread, backup_running, backup_status, backup_task_id
-    server = PluginServerInterface.get_instance()
     if backup_running:
         src.reply('备份已在进行中')
         return
@@ -183,7 +183,7 @@ def start_backup(src, config):
     backup_thread = threading.Thread(target=run)
     backup_thread.start()
 
-def stop_backup(src):
+def stop_backup(server, src):
     global backup_running, backup_status, stop_flag
     if not backup_running:
         src.reply('没有正在进行的备份')
@@ -193,7 +193,7 @@ def stop_backup(src):
     stop_flag.set()
     src.reply('尝试停止备份')
 
-def status_backup(src):
+def status_backup(server, src):
     global backup_status, backup_task_id, backup_start_time, backup_end_time, backup_upload_speed
     if backup_task_id:
         msg = f'§e备份状态: §a{backup_status} §8| §e任务ID: §b{backup_task_id}'
@@ -207,3 +207,16 @@ def status_backup(src):
         src.reply(msg)
     else:
         src.reply(f'§e备份状态: §a{backup_status}')
+
+def query_backup_records(server, src, count=5):
+    global backup_records
+    count = max(1, min(count, 100))  # 限制在 1 到 100 之间
+    records = load_backup_records(server, count)
+    if not records:
+        src.reply('§e没有找到备份记录')
+        return
+    msg = '§e备份记录: '
+    for record in records:
+        status = '§a成功' if record['success'] else '§c失败'
+        msg += f'\n§8- §f时间: §7{record["time"]}，文件: §7{record["file"]}，状态: {status}'
+    src.reply(msg)

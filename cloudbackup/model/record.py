@@ -1,30 +1,33 @@
 import os
 import json
 
-BACKUP_RECORDS_FILE = os.path.join(os.path.dirname(__file__), 'backup_records.json')
-
+BACKUP_RECORDS_FILE_NAME = 'backup_records.json'
 backup_records = []
 
-def save_backup_records():
+def get_backup_records_path(server):
+    return os.path.join(server.get_data_folder(), BACKUP_RECORDS_FILE_NAME)
+
+def save_backup_records(server):
     try:
-        with open(BACKUP_RECORDS_FILE, 'w', encoding='utf-8') as f:
+        with open(get_backup_records_path(server), 'w', encoding='utf-8') as f:
             json.dump(backup_records, f, ensure_ascii=False, indent=2)
     except Exception:
         pass
 
-def load_backup_records():
+def load_backup_records(server):
     global backup_records
-    if os.path.exists(BACKUP_RECORDS_FILE):
+    path = get_backup_records_path(server)
+    if os.path.exists(path):
         try:
-            with open(BACKUP_RECORDS_FILE, 'r', encoding='utf-8') as f:
+            with open(path, 'r', encoding='utf-8') as f:
                 backup_records = json.load(f)
         except Exception:
             backup_records = []
     else:
         backup_records = []
 
-def query_backup_records(src, count=5):
-    load_backup_records()
+def query_backup_records(server, src, count=5):
+    load_backup_records(server)
     if not backup_records:
         src.reply('§7暂无备份记录')
         return

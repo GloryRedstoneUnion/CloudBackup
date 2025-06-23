@@ -1,8 +1,8 @@
 import threading
 from mcdreforged.api.all import PluginServerInterface
-from .resume_util import load_resume_info, remove_resume_info
-from ..config import CloudBackupConfig
-from .backup_task import do_backup
+from cloudbackup.core.resume_util import load_resume_info, remove_resume_info
+from cloudbackup.config import CloudBackupConfig
+from cloudbackup.core.backup_task import do_backup
 
 backup_thread = None
 backup_running = False
@@ -13,7 +13,7 @@ def continue_cmd_factory(server):
     def continue_cmd(src, ctx):
         global backup_thread, backup_running, backup_status, backup_task_id
         task_id = ctx['task_id']
-        info = load_resume_info(task_id)
+        info = load_resume_info(server, task_id)
         if not info:
             src.reply(f'§c未找到断点信息: {task_id}')
             return
@@ -33,10 +33,10 @@ def continue_cmd_factory(server):
         backup_thread.start()
     return continue_cmd
 
-def abort_cmd_factory():
+def abort_cmd_factory(server):
     def abort_cmd(src, ctx):
         task_id = ctx['task_id']
-        remove_resume_info(task_id)
+        remove_resume_info(server, task_id)
         src.reply(f'§a已放弃断点任务: {task_id}')
     return abort_cmd
 
@@ -44,4 +44,4 @@ def register_resume_commands(builder, server):
     builder.arg('task_id', str)
     builder.command('!!cb continue <task_id>', continue_cmd_factory(server))
     builder.arg('task_id', str)
-    builder.command('!!cb abort <task_id>', abort_cmd_factory())
+    builder.command('!!cb abort <task_id>', abort_cmd_factory(server))

@@ -1,10 +1,10 @@
 # MCDR CloudBackup 插件入口文件
 # 支持阿里云OSS自动备份
 from mcdreforged.api.all import *
-from .core.core import start_backup, stop_backup, list_backups, status_backup, query_backup_records
-from .config import CloudBackupConfig
-from .core.backup_task import backup_running, backup_task_id, load_resume_info
-from .cmd.command_tree import register_cb_command
+from cloudbackup.core.core import start_backup, stop_backup, list_backups, status_backup, query_backup_records
+from cloudbackup.config import CloudBackupConfig
+from cloudbackup.core.backup_task import backup_running, backup_task_id, load_resume_info
+from cloudbackup.cmd.command_tree import register_cb_command
 import threading
 import json
 import os
@@ -21,8 +21,8 @@ PLUGIN_METADATA = {
 def on_load(server: PluginServerInterface, old):
     server.logger.info('CloudBackup 插件已加载')
     config = server.load_config_simple(target_class=CloudBackupConfig)
-    # 直接遍历 resume 目录，提示所有断点任务
-    resume_dir = os.path.join(os.path.dirname(__file__), 'resume')
+    # 遍历数据目录 resume，提示所有断点任务
+    resume_dir = os.path.join(server.get_data_folder(), 'resume')
     if os.path.exists(resume_dir):
         for fname in os.listdir(resume_dir):
             if fname.endswith('.json'):
@@ -41,7 +41,7 @@ def on_load(server: PluginServerInterface, old):
             with open(config_path, 'w', encoding='utf-8') as f:
                 json.dump(config.__dict__, f, ensure_ascii=False, indent=2)
         server.reload_plugin('cloudbackup')
-    from .core.core import continue_cmd_factory, abort_cmd_factory
+    from cloudbackup.core.core import continue_cmd_factory, abort_cmd_factory
     # config_setter 回调
     def config_setter(src, key, value):
         key_map = {
@@ -95,11 +95,11 @@ def on_load(server: PluginServerInterface, old):
         query_backup_records,
         config_setter,
         continue_cmd_factory(server),
-        abort_cmd_factory()
+        abort_cmd_factory(server)
     )
 
 def on_unload(server: PluginServerInterface):
-    from .core.backup_task import backup_running, backup_task_id, stop_flag, load_resume_info, save_resume_info
+    from cloudbackup.core.backup_task import backup_running, backup_task_id, stop_flag, load_resume_info, save_resume_info
     # 插件卸载时检查是否有未完成任务
     if backup_running and backup_task_id:
         server.logger.warning('§c卸载过程中检测到进行中的任务，正在请求安全终止...')
