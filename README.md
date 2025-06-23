@@ -36,7 +36,7 @@ requirements.txt
 
 ## 安装与依赖
 1. 本项目依赖`alibabacloud-oss-v2`
-2. 将本插件文件夹放入 MCDR 的 plugins 目录。
+2. 将release中的.mcdr文件放入 MCDR 服务器的 plugins 目录。
 3. 配置 `config.json`（首次启动会自动生成）。
 
 ## 配置说明（config.json）
