@@ -38,6 +38,6 @@ jobs:
           name: Release ${{ steps.get_tag.outputs.tag }}
           body: |
             自动发布：main 分支最新代码打包为 mcdr-cloudbackup.mcdr
-          files: mcdr-cloudbackup.mcdr
+          files: mcdr-cloudbackup-${{ steps.get_tag.outputs.tag }}.mcdr
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
