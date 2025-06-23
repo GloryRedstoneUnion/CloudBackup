@@ -1,0 +1,40 @@
+name: Release MCDR CloudBackup
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Zip plugin directory
+        run: |
+          zip -r mcdr-cloudbackup.mcdr . -x "*.git*" "*.github*" "*.DS_Store"
+
+      - name: Get latest tag or use date
+        id: get_tag
+        run: |
+          TAG=$(git describe --tags --abbrev=0 2>/dev/null || date +'%Y%m%d%H%M%S')
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_tag.outputs.tag }}
+          name: Release ${{ steps.get_tag.outputs.tag }}
+          body: |
+            自动发布：main 分支最新代码打包为 mcdr-cloudbackup.mcdr
+          files: mcdr-cloudbackup.mcdr
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
